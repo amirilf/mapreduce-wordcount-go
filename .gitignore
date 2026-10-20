@@ -1,6 +1,10 @@
 # binaries
 /bin/
 
+# local inputs and generated output
+/input*.txt
+/output.txt
+
 # test artifacts
 *.test
 *.out
