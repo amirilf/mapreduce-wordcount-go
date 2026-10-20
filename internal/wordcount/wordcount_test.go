@@ -21,7 +21,8 @@ func TestWords(t *testing.T) {
 		{"contractions kept", "Don't, I'll couldn't", []string{"don't", "i'll", "couldn't"}},
 		{"quotes stripped", "'tis 'hello' ’curly' '", []string{"tis", "hello", "curly"}},
 		{"hyphen separates", "re-use Gutenberg-tm", []string{"re", "use", "gutenberg", "tm"}},
-		{"digits are words", "chapter 12, 1895.", []string{"chapter", "12", "1895"}},
+		{"numbers are not words", "chapter 12, 1895.", []string{"chapter"}},
+		{"contractions with i", "I'd I'm I've", []string{"i'd", "i'm", "i've"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

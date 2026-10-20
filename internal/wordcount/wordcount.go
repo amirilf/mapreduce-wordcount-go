@@ -35,11 +35,11 @@ func Reduce(_ string, values []string) string {
 	return strconv.Itoa(sum)
 }
 
-// Words splits text into lower-cased words of letters and digits.
+// Words splits text into lower-cased words made of letters.
 // Apostrophes are kept inside a word (don't) and trimmed from its edges.
 func Words(text string) []string {
 	fields := strings.FieldsFunc(text, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !strings.ContainsRune(apostrophes, r)
+		return !unicode.IsLetter(r) && !strings.ContainsRune(apostrophes, r)
 	})
 	words := fields[:0]
 	for _, f := range fields {
