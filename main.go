@@ -3,11 +3,11 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/amirilf/mapreduce-wordcount-go/internal/mapreduce"
 	"github.com/amirilf/mapreduce-wordcount-go/internal/wordcount"
@@ -43,21 +43,9 @@ func run(files []string, nReduce int, output string, stderr io.Writer) error {
 			return fmt.Errorf("no words counted, %s not written", output)
 		}
 	}
-	return writeOutput(output, results)
-}
-
-func writeOutput(path string, results []mapreduce.KeyValue) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	w := bufio.NewWriter(f)
+	var b strings.Builder
 	for _, kv := range results {
-		fmt.Fprintf(w, "%s: %s\n", kv.Key, kv.Value)
+		fmt.Fprintf(&b, "%s: %s\n", kv.Key, kv.Value)
 	}
-	if err := w.Flush(); err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
+	return os.WriteFile(output, []byte(b.String()), 0o644)
 }
