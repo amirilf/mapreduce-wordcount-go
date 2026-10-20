@@ -7,7 +7,7 @@ import (
 	"github.com/amirilf/mapreduce-wordcount-go/internal/mapreduce"
 )
 
-func TestWords(t *testing.T) {
+func TestSplitWords(t *testing.T) {
 	tests := []struct {
 		name string
 		text string
@@ -26,8 +26,8 @@ func TestWords(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Words(tt.text); !slices.Equal(got, tt.want) {
-				t.Errorf("Words(%q) = %q, want %q", tt.text, got, tt.want)
+			if got := splitWords(tt.text); !slices.Equal(got, tt.want) {
+				t.Errorf("splitWords(%q) = %q, want %q", tt.text, got, tt.want)
 			}
 		})
 	}

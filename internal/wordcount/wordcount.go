@@ -2,7 +2,6 @@
 package wordcount
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -14,7 +13,7 @@ const apostrophes = "'’"
 
 // Map emits a ("word", "1") pair for every word in contents.
 func Map(contents string) []mapreduce.KeyValue {
-	words := Words(contents)
+	words := splitWords(contents)
 	kvs := make([]mapreduce.KeyValue, len(words))
 	for i, w := range words {
 		kvs[i] = mapreduce.KeyValue{Key: w, Value: "1"}
@@ -28,20 +27,20 @@ func Reduce(_ string, values []string) string {
 	for _, v := range values {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			panic(fmt.Sprintf("wordcount: invalid count %q", v))
+			panic(err)
 		}
 		sum += n
 	}
 	return strconv.Itoa(sum)
 }
 
-// Words splits text into lower-cased words made of letters.
+// splitWords splits text into lower-cased words made of letters.
 // Apostrophes are kept inside a word (don't) and trimmed from its edges.
-func Words(text string) []string {
+func splitWords(text string) []string {
 	fields := strings.FieldsFunc(text, func(r rune) bool {
 		return !unicode.IsLetter(r) && !strings.ContainsRune(apostrophes, r)
 	})
-	words := fields[:0]
+	var words []string
 	for _, f := range fields {
 		if w := strings.Trim(f, apostrophes); w != "" {
 			words = append(words, strings.ToLower(w))
