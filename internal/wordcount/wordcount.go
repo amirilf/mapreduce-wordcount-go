@@ -2,6 +2,8 @@
 package wordcount
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -18,6 +20,19 @@ func Map(contents string) []mapreduce.KeyValue {
 		kvs[i] = mapreduce.KeyValue{Key: w, Value: "1"}
 	}
 	return kvs
+}
+
+// Reduce returns the total count of a word: the sum of its values.
+func Reduce(_ string, values []string) string {
+	sum := 0
+	for _, v := range values {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			panic(fmt.Sprintf("wordcount: invalid count %q", v))
+		}
+		sum += n
+	}
+	return strconv.Itoa(sum)
 }
 
 // Words splits text into lower-cased words of letters and digits.

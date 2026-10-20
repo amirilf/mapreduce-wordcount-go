@@ -32,6 +32,22 @@ func TestWords(t *testing.T) {
 	}
 }
 
+func TestReduce(t *testing.T) {
+	tests := []struct {
+		values []string
+		want   string
+	}{
+		{[]string{"1"}, "1"},
+		{[]string{"1", "1", "1"}, "3"},
+		{[]string{"2", "40"}, "42"},
+	}
+	for _, tt := range tests {
+		if got := Reduce("word", tt.values); got != tt.want {
+			t.Errorf("Reduce(%q) = %s, want %s", tt.values, got, tt.want)
+		}
+	}
+}
+
 func TestMap(t *testing.T) {
 	got := Map("the quick brown fox jumps over the lazy dog")
 	words := []string{"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"}
