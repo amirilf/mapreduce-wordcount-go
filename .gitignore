@@ -1,0 +1,13 @@
+# binaries
+/wordcount
+/bin/
+
+# test artifacts
+*.test
+*.out
+coverage.*
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
