@@ -31,15 +31,15 @@ func Run(files []string, mapf MapFunc, reducef ReduceFunc, nReduce int) ([]KeyVa
 	}
 
 	intermediate := make(chan KeyValue)
-	errs := make([]error, len(files))
+	readErrs := make(chan error, len(files))
 	var mappers sync.WaitGroup
-	for i, file := range files {
+	for _, file := range files {
 		mappers.Add(1)
 		go func() {
 			defer mappers.Done()
 			contents, err := os.ReadFile(file)
 			if err != nil {
-				errs[i] = err
+				readErrs <- err
 				return
 			}
 			for _, kv := range mapf(string(contents)) {
@@ -50,9 +50,14 @@ func Run(files []string, mapf MapFunc, reducef ReduceFunc, nReduce int) ([]KeyVa
 	go func() {
 		mappers.Wait()
 		close(intermediate)
+		close(readErrs)
 	}()
 
 	partitions := shuffle(intermediate, nReduce)
+	var errs []error
+	for err := range readErrs {
+		errs = append(errs, err)
+	}
 
 	results := make(chan KeyValue)
 	var reducers sync.WaitGroup
