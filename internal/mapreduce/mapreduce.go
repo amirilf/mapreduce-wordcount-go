@@ -24,40 +24,39 @@ type ReduceFunc func(key string, values []string) string
 
 // Run maps every file in its own goroutine, shuffles the pairs into nReduce
 // partitions and reduces each partition in its own goroutine. It returns the
-// results sorted by key. Files that cannot be read are skipped and reported in the returned error.
-func Run(files []string, mapf MapFunc, reducef ReduceFunc, nReduce int) ([]KeyValue, error) {
+// results sorted by key. With chunkSize > 0, files are cut into chunks of at
+// most chunkSize bytes and every chunk gets its own map goroutine instead.
+// Files that cannot be read are skipped and reported in the returned error.
+func Run(files []string, mapf MapFunc, reducef ReduceFunc, nReduce, chunkSize int) ([]KeyValue, error) {
 	if nReduce < 1 {
 		return nil, fmt.Errorf("nReduce must be at least 1, got %d", nReduce)
 	}
 
 	intermediate := make(chan KeyValue)
-	readErrs := make(chan error, len(files))
+	var errs []error
 	var mappers sync.WaitGroup
 	for _, file := range files {
-		mappers.Add(1)
-		go func() {
-			defer mappers.Done()
-			contents, err := os.ReadFile(file)
-			if err != nil {
-				readErrs <- err
-				return
-			}
-			for _, kv := range mapf(string(contents)) {
-				intermediate <- kv
-			}
-		}()
+		contents, err := os.ReadFile(file)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		for _, chunk := range split(string(contents), chunkSize) {
+			mappers.Add(1)
+			go func() {
+				defer mappers.Done()
+				for _, kv := range mapf(chunk) {
+					intermediate <- kv
+				}
+			}()
+		}
 	}
 	go func() {
 		mappers.Wait()
 		close(intermediate)
-		close(readErrs)
 	}()
 
 	partitions := shuffle(intermediate, nReduce)
-	var errs []error
-	for err := range readErrs {
-		errs = append(errs, err)
-	}
 
 	results := make(chan KeyValue)
 	var reducers sync.WaitGroup

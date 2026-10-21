@@ -9,11 +9,13 @@ import (
 
 func TestRun(t *testing.T) {
 	tests := []struct {
-		name     string
-		patterns []string
+		name      string
+		patterns  []string
+		chunkSize int
 	}{
-		{"file names", []string{"testdata/input1.txt", "testdata/input2.txt"}},
-		{"glob pattern", []string{"testdata/input*.txt"}},
+		{"file names", []string{"testdata/input1.txt", "testdata/input2.txt"}, 0},
+		{"glob pattern", []string{"testdata/input*.txt"}, 0},
+		{"chunked", []string{"testdata/input*.txt"}, 16},
 	}
 	want, err := os.ReadFile("testdata/output.golden")
 	if err != nil {
@@ -23,7 +25,7 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := filepath.Join(t.TempDir(), "output.txt")
 			var stderr strings.Builder
-			if err := run(tt.patterns, 3, output, &stderr); err != nil {
+			if err := run(tt.patterns, 3, tt.chunkSize, output, &stderr); err != nil {
 				t.Fatal(err)
 			}
 			if stderr.Len() > 0 {
@@ -45,7 +47,7 @@ func TestRunMissingFile(t *testing.T) {
 	var stderr strings.Builder
 
 	patterns := []string{"testdata/input1.txt", "testdata/missing.txt", "testdata/input2.txt"}
-	if err := run(patterns, 3, output, &stderr); err != nil {
+	if err := run(patterns, 3, 0, output, &stderr); err != nil {
 		t.Fatal(err)
 	}
 
@@ -61,7 +63,7 @@ func TestRunNoReadableFile(t *testing.T) {
 	output := filepath.Join(t.TempDir(), "output.txt")
 	var stderr strings.Builder
 
-	if err := run([]string{"testdata/missing.txt"}, 3, output, &stderr); err == nil {
+	if err := run([]string{"testdata/missing.txt"}, 3, 0, output, &stderr); err == nil {
 		t.Error("want an error when no file can be read")
 	}
 	if _, err := os.Stat(output); !os.IsNotExist(err) {

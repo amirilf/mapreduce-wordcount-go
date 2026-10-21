@@ -1,1 +1,2 @@
-The dog barks, and the fox runs away!
+The dog barks,
+and the fox runs away!
