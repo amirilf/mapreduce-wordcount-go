@@ -7,42 +7,57 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/amirilf/mapreduce-wordcount-go/internal/mapreduce"
 	"github.com/amirilf/mapreduce-wordcount-go/internal/wordcount"
 )
 
-var defaultFiles = []string{"input1.txt", "input2.txt", "input3.txt", "input4.txt", "input5.txt"}
-
 func main() {
-	nReduce := flag.Int("nreduce", 4, "number of reduce partitions")
+	nReduce := flag.Int("nreduce", 4, "number of reduce partitions, one reduce goroutine each")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: go run main.go [-nreduce n] file-or-pattern ...")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
-	if *nReduce < 1 {
-		fmt.Fprintln(os.Stderr, "-nreduce must be at least 1")
+	if flag.NArg() == 0 || *nReduce < 1 {
+		flag.Usage()
 		os.Exit(2)
 	}
 
-	files := flag.Args()
-	if len(files) == 0 {
-		files = defaultFiles
-	}
-	if err := run(files, *nReduce, "output.txt", os.Stderr); err != nil {
+	if err := run(flag.Args(), *nReduce, "output.txt", os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-// run counts the words of files into output. Files that cannot be read are
-// reported to stderr and skipped; if nothing is left to count, output is not written.
-func run(files []string, nReduce int, output string, stderr io.Writer) error {
+// run counts the words of all files matching patterns into output. Patterns
+// that match nothing and files that cannot be read are reported to stderr and
+// skipped; if no words are left, output is not written.
+func run(patterns []string, nReduce int, output string, stderr io.Writer) error {
+	var files []string
+	for _, p := range patterns {
+		matches, err := filepath.Glob(p)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", p, err)
+			continue
+		}
+		if len(matches) == 0 {
+			fmt.Fprintf(stderr, "%s: no such file\n", p)
+			continue
+		}
+		files = append(files, matches...)
+	}
+
 	results, err := mapreduce.Run(files, wordcount.Map, wordcount.Reduce, nReduce)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
-		if len(results) == 0 {
-			return fmt.Errorf("no words counted, %s not written", output)
-		}
 	}
+	if len(results) == 0 {
+		return fmt.Errorf("no words counted, %s not written", output)
+	}
+
 	var b strings.Builder
 	for _, kv := range results {
 		fmt.Fprintf(&b, "%s: %s\n", kv.Key, kv.Value)

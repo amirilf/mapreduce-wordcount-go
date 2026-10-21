@@ -8,27 +8,52 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	tests := []struct {
+		name     string
+		patterns []string
+	}{
+		{"file names", []string{"testdata/input1.txt", "testdata/input2.txt"}},
+		{"glob pattern", []string{"testdata/input*.txt"}},
+	}
+	want, err := os.ReadFile("testdata/output.golden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := filepath.Join(t.TempDir(), "output.txt")
+			var stderr strings.Builder
+			if err := run(tt.patterns, 3, output, &stderr); err != nil {
+				t.Fatal(err)
+			}
+			if stderr.Len() > 0 {
+				t.Errorf("unexpected stderr: %s", stderr.String())
+			}
+			got, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != string(want) {
+				t.Errorf("output.txt:\n%s\nwant:\n%s", got, want)
+			}
+		})
+	}
+}
+
+func TestRunMissingFile(t *testing.T) {
 	output := filepath.Join(t.TempDir(), "output.txt")
-	files := []string{"testdata/input1.txt", "testdata/missing.txt", "testdata/input2.txt"}
 	var stderr strings.Builder
 
-	if err := run(files, 3, output, &stderr); err != nil {
+	patterns := []string{"testdata/input1.txt", "testdata/missing.txt", "testdata/input2.txt"}
+	if err := run(patterns, 3, output, &stderr); err != nil {
 		t.Fatal(err)
 	}
 
 	if !strings.Contains(stderr.String(), "testdata/missing.txt") {
 		t.Errorf("stderr = %q, want an error naming the missing file", stderr.String())
 	}
-	got, err := os.ReadFile(output)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want, err := os.ReadFile("testdata/output.golden")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != string(want) {
-		t.Errorf("output.txt:\n%s\nwant:\n%s", got, want)
+	if _, err := os.Stat(output); err != nil {
+		t.Errorf("output not written: %v", err)
 	}
 }
 
